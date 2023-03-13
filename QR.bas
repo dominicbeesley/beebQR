@@ -1,0 +1,57 @@
+REM > QR Code Generator
+VER=23:ECCPB=30:ECCB=9:BUFLEN=1487:RAWMOD=10916:RAWWORD=RAWMOD DIV8:DATALEN=RAWWORD - ECCPB * ECCB
+DIM D% 100:$D%="HELLO STARDORT"
+L%=LEN($D%)
+
+DIMrsdiv ECCPB, tmp BUFLEN, res BUFLEN
+P%=0:Q%=0
+
+REM fill buffer
+PROCapp(4,4)
+PROCapp(L%,16)
+FORI%=0TOL%-1
+ PROCapp(D%?I%,8)
+NEXT
+PROCapp(0,4):REMadd a dummy 0 segment
+IFQ%<>0THENPROCapp(0,8-Q%):REM pad to a BYTE
+IFP%<BUFLEN:I%=&EC:REPEAT:res?P%=I%:P%=P%+1:I%=I%EOR&FD:UNTILP%>=BUFLEN
+
+
+REM compute RS divisor
+rsdiv?(ECCPB-1)=1:r=1
+FORI%=0TOECCPB-1
+ PRINT ".";
+ FORJ%=0TOECCPB-1
+  rsdiv?J%=FNrsmul(rsdiv?J%,r)
+  IF J%<ECCPB-1THENrsdiv?J%=rsdiv?J%EORrsdiv?(J%+1)
+ NEXTJ%
+ r=FNrsmul(r,2)
+NEXTI%
+
+REM INTERLEAVE
+NSB%=ECCB-(RAWWORD MOD ECCB)
+SBL%=(RAWWORD DIV ECCB) - ECCPB
+FORI%=0TOECCB-1
+ DL%=SBL%:IFI%<NSB%THENDL%=DL%+1
+
+NEXT
+
+END
+
+DEFFNrsmul(X%,Y%):LOCALZ%,I%
+FOR I%=0TO7
+ Z%=Z%*2
+ IF Z%>=256 THEN Z%=Z%EOR&11D
+ IF (Y% AND &80)>0 THEN Z%=Z% EOR X%
+ Y%=Y%+Y% 
+NEXT
+=Z%
+
+DEFPROCapp(D%,N%)
+LOCALM%:M%=2^(N%-1)
+REPEAT
+ res?P%=res?P%+res?P%:IF (D% AND M%)<>0 THEN res?P%=res?P%+1
+ Q%=Q%+1:IF Q%>=8 THEN Q%=0:P%=P%+1
+ M%=M%DIV2
+UNTIL M%=0
+ENDPROC
